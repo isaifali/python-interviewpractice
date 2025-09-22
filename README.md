@@ -1,184 +1,285 @@
-Part D: Window Functions & Ranking (151–200)
-Data Setup
+Part A: Basics (1–50)
+
+Data Setup Example (for all questions in Part A):
+
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, row_number, rank, dense_rank, lead, lag, sum, avg
-from pyspark.sql.window import Window
+from pyspark.sql.functions import col
 
 spark = SparkSession.builder.appName("PySparkInterview").getOrCreate()
 
-# Employee DataFrame
-emp_data = [
-    (1,"Alice",29,"NY","HR",5000),
-    (2,"Bob",31,"CA","Engineering",6000),
-    (3,"Cathy",25,"TX","Sales",4500),
-    (4,"David",35,"NY","HR",7000),
-    (5,"Eve",28,"CA","Engineering",5200),
-    (6,"Frank",32,"TX","Sales",4800),
-    (7,"Grace",30,"NY","HR",5500)
+data = [
+    (1,"Alice",29,"NY"),
+    (2,"Bob",31,"CA"),
+    (3,"Cathy",25,"TX"),
+    (4,"David",35,"NY"),
+    (5,"Eve",28,"CA")
 ]
-emp_columns = ["emp_id","name","age","state","dept_name","salary"]
-df_emp = spark.createDataFrame(emp_data, emp_columns)
 
-151. Row number per department ordered by salary descending
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("row_num", row_number().over(windowSpec)).show()
+columns = ["id","name","age","state"]
+df = spark.createDataFrame(data, columns)
+df.show()
 
-152. Rank per department by salary
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("rank", rank().over(windowSpec)).show()
 
-153. Dense rank per department by salary
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("dense_rank", dense_rank().over(windowSpec)).show()
+Questions 1–50 with solutions (explicit, no skipping):
 
-154. Lead salary by 1 row per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("next_salary", lead("salary",1).over(windowSpec)).show()
+Select a single column
 
-155. Lag salary by 1 row per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("prev_salary", lag("salary",1).over(windowSpec)).show()
+df.select("name").show()
 
-156. Cumulative sum of salary per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_salary", sum("salary").over(windowSpec)).show()
 
-157. Cumulative average salary per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_avg_salary", avg("salary").over(windowSpec)).show()
+Select multiple columns
 
-158. Top 2 salaries per department
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("rank", row_number().over(windowSpec)).filter(col("rank")<=2).show()
+df.select("name","age").show()
 
-159. Employees with salary difference from previous employee per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("prev_salary", lag("salary",1).over(windowSpec)).withColumn("salary_diff", col("salary")-col("prev_salary")).show()
 
-160. Employees with salary difference from next employee per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("next_salary", lead("salary",1).over(windowSpec)).withColumn("salary_diff_next", col("next_salary")-col("salary")).show()
+Filter rows where age > 30
 
-161. Total salary per department (window function)
-windowSpec = Window.partitionBy("dept_name")
-df_emp.withColumn("total_salary_dept", sum("salary").over(windowSpec)).show()
+df.filter(df.age > 30).show()
 
-162. Average age per department
-windowSpec = Window.partitionBy("dept_name")
-df_emp.withColumn("avg_age_dept", avg("age").over(windowSpec)).show()
 
-163. Add dense rank based on age per state
-windowSpec = Window.partitionBy("state").orderBy(col("age").desc())
-df_emp.withColumn("dense_rank_age", dense_rank().over(windowSpec)).show()
+Filter rows where state = 'CA' and age > 28
 
-164. Row number by salary globally
-windowSpec = Window.orderBy(col("salary").desc())
-df_emp.withColumn("global_row_num", row_number().over(windowSpec)).show()
+df.filter((df.state=="CA") & (df.age>28)).show()
 
-165. Rank by age globally
-windowSpec = Window.orderBy(col("age").desc())
-df_emp.withColumn("global_rank_age", rank().over(windowSpec)).show()
 
-166. Lead and lag age globally
-windowSpec = Window.orderBy("age")
-df_emp.withColumn("prev_age", lag("age").over(windowSpec)).withColumn("next_age", lead("age").over(windowSpec)).show()
+Add a new column with age + 5
 
-167. Employees with cumulative salary globally
-windowSpec = Window.orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_salary_global", sum("salary").over(windowSpec)).show()
+df.withColumn("age_plus_5", col("age")+5).show()
 
-168. Top N salaries globally (top 3)
-windowSpec = Window.orderBy(col("salary").desc())
-df_emp.withColumn("rank", row_number().over(windowSpec)).filter(col("rank")<=3).show()
 
-169. Employees with salary percent rank per department
-from pyspark.sql.functions import percent_rank
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary"))
-df_emp.withColumn("percent_rank_salary", percent_rank().over(windowSpec)).show()
+Drop a column
 
-170. Employees with Ntile (quartiles) per department
-from pyspark.sql.functions import ntile
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("quartile", ntile(4).over(windowSpec)).show()
+df.drop("state").show()
 
-171. Employees whose rank = 1 per department (highest salary)
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("rank", row_number().over(windowSpec)).filter(col("rank")==1).show()
 
-172. Employees whose dense_rank = 1 per state (oldest)
-windowSpec = Window.partitionBy("state").orderBy(col("age").desc())
-df_emp.withColumn("dense_rank", dense_rank().over(windowSpec)).filter(col("dense_rank")==1).show()
+Rename a column
 
-173. Employees with salary difference from max salary per department
+df.withColumnRenamed("name","full_name").show()
+
+
+Count total rows
+
+df.count()
+
+
+Count distinct states
+
+df.select("state").distinct().count()
+
+
+Sort by age ascending
+
+df.orderBy(col("age").asc()).show()
+
+
+Sort by age descending
+
+df.orderBy(col("age").desc()).show()
+
+
+Limit to top 3 rows
+
+df.limit(3).show()
+
+
+Take first row
+
+df.first()
+
+
+Take first 2 rows
+
+df.take(2)
+
+
+Collect all rows as list
+
+df.collect()
+
+
+Show schema
+
+df.printSchema()
+
+
+Describe DataFrame
+
+df.describe().show()
+
+
+Filter nulls in a column (simulate with nulls)
+
+from pyspark.sql import Row
+df_with_null = spark.createDataFrame([Row(id=1,name="Alice"), Row(id=2,name=None)])
+df_with_null.filter(df_with_null.name.isNotNull()).show()
+
+
+Filter rows where column is null
+
+df_with_null.filter(df_with_null.name.isNull()).show()
+
+
+Drop duplicate rows
+
+df_dup = df.union(df)  # create duplicates
+df_dup.dropDuplicates().show()
+
+
+Replace values in a column (withColumn + when)
+
+from pyspark.sql.functions import when
+df.withColumn("state_new", when(col("state")=="NY","New York").otherwise(col("state"))).show()
+
+
+Create new column based on condition
+
+df.withColumn("is_adult", when(col("age")>=30, True).otherwise(False)).show()
+
+
+RDD: Convert DataFrame to RDD
+
+rdd = df.rdd
+rdd.collect()
+
+
+RDD: Map function to increase age by 1
+
+rdd.map(lambda x: (x.id,x.name,x.age+1,x.state)).collect()
+
+
+RDD: Filter age > 30
+
+rdd.filter(lambda x: x.age>30).collect()
+
+
+RDD: Reduce to sum of ages
+
+from functools import reduce
+reduce(lambda a,b: a+b, rdd.map(lambda x: x.age).collect())
+
+
+RDD: Count by key (state)
+
+rdd.map(lambda x: (x.state,1)).reduceByKey(lambda a,b: a+b).collect()
+
+
+RDD: Distinct states
+
+rdd.map(lambda x: x.state).distinct().collect()
+
+
+RDD: Take top 2 oldest
+
+rdd.takeOrdered(2,key=lambda x: -x.age)
+
+
+RDD: Union two RDDs
+
+rdd2 = spark.createDataFrame([(6,"Frank",32,"TX")], columns).rdd
+rdd.union(rdd2).collect()
+
+
+RDD: Intersection
+
+rdd.intersection(rdd2).collect()
+
+
+RDD: Subtract
+
+rdd.subtract(rdd2).collect()
+
+
+RDD: Sort by age
+
+rdd.sortBy(lambda x: x.age, ascending=False).collect()
+
+
+RDD: MapValues (for key-value RDD)
+
+kv_rdd = rdd.map(lambda x: (x.name,x.age))
+kv_rdd.mapValues(lambda x: x+1).collect()
+
+
+RDD: Filter by value in key-value
+
+kv_rdd.filter(lambda x: x[1]>30).collect()
+
+
+DataFrame: Convert column to string
+
+df.withColumn("age_str", col("age").cast("string")).show()
+
+
+DataFrame: Limit, select, and order combined
+
+df.orderBy(col("age").desc()).select("name","age").limit(3).show()
+
+
+DataFrame: Add multiple columns
+
+df.withColumn("age_plus_10", col("age")+10).withColumn("age_times_2", col("age")*2).show()
+
+
+Filter using isin
+
+df.filter(col("state").isin("NY","CA")).show()
+
+
+Filter using like
+
+df.filter(col("name").like("A%")).show()
+
+
+Filter using rlike (regex)
+
+df.filter(col("name").rlike("^A.*e$")).show()
+
+
+Filter using between
+
+df.filter(col("age").between(28,32)).show()
+
+
+Count per state (groupBy)
+
+df.groupBy("state").count().show()
+
+
+Sum ages per state
+
+from pyspark.sql.functions import sum
+df.groupBy("state").agg(sum("age")).show()
+
+
+Avg age per state
+
+from pyspark.sql.functions import avg
+df.groupBy("state").agg(avg("age")).show()
+
+
+Max age per state
+
 from pyspark.sql.functions import max
-windowSpec = Window.partitionBy("dept_name")
-df_emp.withColumn("max_salary_dept", max("salary").over(windowSpec)).withColumn("salary_diff_max", col("max_salary_dept")-col("salary")).show()
+df.groupBy("state").agg(max("age")).show()
 
-174. Cumulative sum of age per state
-windowSpec = Window.partitionBy("state").orderBy("age").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_age_state", sum("age").over(windowSpec)).show()
 
-175. Average salary per state
-windowSpec = Window.partitionBy("state")
-df_emp.withColumn("avg_salary_state", avg("salary").over(windowSpec)).show()
+Min age per state
 
-176. Row number per state ordered by age
-windowSpec = Window.partitionBy("state").orderBy("age")
-df_emp.withColumn("row_num_state", row_number().over(windowSpec)).show()
+from pyspark.sql.functions import min
+df.groupBy("state").agg(min("age")).show()
 
-177. Rank per state by salary descending
-windowSpec = Window.partitionBy("state").orderBy(col("salary").desc())
-df_emp.withColumn("rank_state_salary", rank().over(windowSpec)).show()
 
-178. Dense rank per state by salary descending
-windowSpec = Window.partitionBy("state").orderBy(col("salary").desc())
-df_emp.withColumn("dense_rank_state_salary", dense_rank().over(windowSpec)).show()
+Count distinct names
 
-179. Lead salary per state by 2 rows
-windowSpec = Window.partitionBy("state").orderBy("salary")
-df_emp.withColumn("lead_salary_2", lead("salary",2).over(windowSpec)).show()
+from pyspark.sql.functions import countDistinct
+df.agg(countDistinct("name")).show()
 
-180. Lag salary per state by 2 rows
-windowSpec = Window.partitionBy("state").orderBy("salary")
-df_emp.withColumn("lag_salary_2", lag("salary",2).over(windowSpec)).show()
 
-181. Employees with cumulative salary per state
-windowSpec = Window.partitionBy("state").orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_salary_state", sum("salary").over(windowSpec)).show()
+RDD: Map and reduce to sum ages > 30
 
-182. Employees with cumulative average salary per state
-windowSpec = Window.partitionBy("state").orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_avg_salary_state", avg("salary").over(windowSpec)).show()
+rdd.filter(lambda x: x.age>30).map(lambda x: x.age).reduce(lambda a,b:a+b)
 
-183. Employees with rank <= 2 per department
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("rank", row_number().over(windowSpec)).filter(col("rank")<=2).show()
 
-184. Employees with dense rank <= 2 per department
-windowSpec = Window.partitionBy("dept_name").orderBy(col("salary").desc())
-df_emp.withColumn("dense_rank", dense_rank().over(windowSpec)).filter(col("dense_rank")<=2).show()
+RDD: Map to tuple (state, age), groupByKey, sum per state
 
-185. Employees with salary difference to next employee per state
-windowSpec = Window.partitionBy("state").orderBy("salary")
-df_emp.withColumn("next_salary", lead("salary").over(windowSpec)).withColumn("salary_diff_next", col("next_salary")-col("salary")).show()
-
-186. Employees with salary difference to previous employee per state
-windowSpec = Window.partitionBy("state").orderBy("salary")
-df_emp.withColumn("prev_salary", lag("salary").over(windowSpec)).withColumn("salary_diff_prev", col("salary")-col("prev_salary")).show()
-
-187. Employees with cumulative salary and row number per department
-windowSpec = Window.partitionBy("dept_name").orderBy("salary").rowsBetween(Window.unboundedPreceding, Window.currentRow)
-df_emp.withColumn("cum_salary", sum("salary").over(windowSpec)).withColumn("row_num", row_number().over(Window.partitionBy("dept_name").orderBy("salary"))).show()
-
-188. Employees with salary percent rank per department
-from pyspark.sql.functions import percent_rank
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("percent_rank", percent_rank().over(windowSpec)).show()
-
-189. Employees with quartile (ntile=4) per department
-from pyspark.sql.functions import ntile
-windowSpec = Window.partitionBy("dept_name").orderBy("salary")
-df_emp.withColumn("quartile", ntile(4).over(windowSpec)).show()
-
-190. Employees whose rank = 1 per state (highest salary)
-windowSpec = Window.partitionBy("state").orderBy(col("salary").
+rdd.map(lambda x: (x.state,x.age)).groupByKey().map(lambda x: (x[0],sum(x[1]))).collect()
